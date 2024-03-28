@@ -1,0 +1,10 @@
+ul.mt-4 {
+    list-style: none; /* Remove default bullet points */
+    padding: 0;
+}
+
+li.flex {
+    background-color: #fffacd; /* Light yellow background */
+    box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    transform: rotate(2deg); /* Slightly rotated for the post-it effect */
+}

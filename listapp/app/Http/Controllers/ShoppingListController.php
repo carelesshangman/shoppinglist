@@ -10,8 +10,12 @@ class ShoppingListController extends Controller
     public function index()
     {
         $items = ShoppingItem::all();
+//        dd($items);
+
         return view('shopping-list', compact('items'));
     }
+
+
 
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
@@ -31,5 +35,12 @@ class ShoppingListController extends Controller
         $item->delete();
         return redirect()->back();
     }
+
+    public function getItems()
+    {
+        $items = ShoppingItem::all();
+        return response()->json($items);
+    }
+
 
 }
