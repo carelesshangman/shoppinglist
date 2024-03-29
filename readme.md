@@ -13,7 +13,7 @@ A Laravel app
 - Clone Repo (git clone https://github.com/carelesshangman/shoppinglist)
 - Install Dependencies (composer install)
 - Configure .env
-- Create Database & Run Migrations (php artisan migrate)
+- Import the listapp{version}.sql
 - Start the Dev Server (php artisan serve)
 
 ## .env (default)
