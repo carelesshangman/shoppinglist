@@ -16,8 +16,15 @@ return new class extends Migration
             $table->string('name');
             $table->boolean('purchased')->default(false);
             $table->timestamps();
+            $table->string('share_code', 4)->unique()->nullable();
+            $table->boolean('is_shared')->default(false);
+            $table->string('owner'); // Assuming you have this column
+            $table->foreign('owner')->references('email')->on('users');
+            $table->unsignedBigInteger('list_id')->nullable();
         });
     }
+
+
 
     /**
      * Reverse the migrations.

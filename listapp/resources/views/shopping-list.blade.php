@@ -63,11 +63,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
-<div class="container mx-auto p-6"> <h1 class="text-3xl font-bold mb-4">Shopping List</h1>
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">Shopping List - {{ $list->share_code }}</h1>
 
     {{-- Item Add Form --}}
-    <form method="POST" action="/items" class="mb-4">
+    <form method="POST" action="/lists/{{ $list->share_code }}/items" class="mb-4">
         @csrf
+        <input type="hidden" name="list_id" value="{{ $list->share_code }}">
+        <input type="hidden" name="quantity" value="1">
+        <input type="hidden" name="purchased" value="0">
         <input type="text" name="name" placeholder="Add Item" class="border border-gray-400 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 mr-2">
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md">Add</button>
         <button type="button" class="bg-gray-500 hover:bg-gray-700 text-white font-medium px-4 py-2 rounded-md ml-2" onclick="exportItems()">Export</button>
@@ -81,24 +85,34 @@
                 {{ $item->name }}
             </span>
                 <div class="flex space-x-2">
-                    <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
-                        @method('PATCH')
-                        @csrf
-                        <button type="submit">Mark as Purchased</button>
-                    </form>
+                    @if ($item->purchased)
+                        {{-- Unmark as Purchased Button --}}
+                        <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
+                            @method('PATCH')
+                            @csrf
+                            <button type="submit">Unmark as Purchased</button>
+                        </form>
+                    @else
+                        {{-- Mark as Purchased Button --}}
+                        <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
+                            @method('PATCH')
+                            @csrf
+                            <button type="submit">Mark as Purchased</button>
+                        </form>
+                    @endif
 
-                    {{-- Delete Functionality  --}}
+                    {{-- Delete functionality remains the same --}}
                     <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
                         @method('DELETE')
                         @csrf
                         <button type="submit">Delete</button>
                     </form>
                 </div>
+
             </li>
         @endforeach
     </ul>
 </div>
-
 
 <script>
     function exportItems() {

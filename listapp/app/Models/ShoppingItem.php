@@ -9,5 +9,10 @@ class ShoppingItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'purchased']; // Add any other fields you want mass-assignable
+    protected $fillable = ['name', 'list_id', 'quantity', 'purchased'];
+
+    public function list()
+    {
+        return $this->belongsTo(ShoppingList::class);
+    }
 }
