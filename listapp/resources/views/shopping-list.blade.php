@@ -52,11 +52,16 @@
         }
 
         #purchased-items h2 {
-            color: #666; /* Slightly subdued text color */
+            color: #666;
         }
 
-        .bg-gray-500 { background-color: #666; } /* Basic gray color */
+        .bg-gray-500 { background-color: #666; }
         .hover\:bg-gray-700:hover { background-color: #444; }
+        .inline-block input[type="number"] {
+            width: 45px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
 
     </style>
 
@@ -64,8 +69,10 @@
 </head>
 <body>
 <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-4">Shopping List - {{ $list->share_code }}</h1>
-
+    <form action="/" class="mb-4">
+        <h1 class="text-3xl font-bold mb-4">Shopping List - {{ $list->share_code }}</h1>
+        <button class="bg-green-500 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md">Home</button>
+    </form>
     {{-- Item Add Form --}}
     <form method="POST" action="/lists/{{ $list->share_code }}/items" class="mb-4">
         @csrf
@@ -75,6 +82,8 @@
         <input type="text" name="name" placeholder="Add Item" class="border border-gray-400 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 mr-2">
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md">Add</button>
         <button type="button" class="bg-gray-500 hover:bg-gray-700 text-white font-medium px-4 py-2 rounded-md ml-2" onclick="exportItems()">Export</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;">
+        <button type="button" class="bg-yellow-500 hover:bg-yellow-700 text-white font-medium px-4 py-2 rounded-md ml-2" id="importButton">Import</button>
     </form>
 
     {{-- Display Shopping Items --}}
@@ -83,18 +92,25 @@
             <li class="flex items-center justify-between p-3 border border-gray-300 rounded-md mb-2" data-item-id="{{ $item->id }}">
             <span class="{{ $item->purchased ? 'line-through text-gray-500' : '' }}">
                 {{ $item->name }}
+                @if (!$item->purchased)
+                <form method="POST" action="/items/{{ $item->id }}/update-quantity" class="inline-block">
+                    @method('PATCH')
+                    @csrf
+                    <input type="number" name="quantity" min="1" value="{{ $item->amount }}" placeholder="{{ $item->quantity }}">
+                    <button type="submit">✅</button>
+                </form>
+                @endif
             </span>
                 <div class="flex space-x-2">
                     @if ($item->purchased)
-                        {{-- Unmark as Purchased Button --}}
-                        <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
+                        <form method="POST" action="/items/{{ $item->id }}/togglePurchased" class="inline-block">
                             @method('PATCH')
                             @csrf
                             <button type="submit">Unmark as Purchased</button>
                         </form>
                     @else
                         {{-- Mark as Purchased Button --}}
-                        <form method="POST" action="/items/{{ $item->id }}" class="inline-block">
+                        <form method="POST" action="/items/{{ $item->id }}/togglePurchased" class="inline-block">
                             @method('PATCH')
                             @csrf
                             <button type="submit">Mark as Purchased</button>
@@ -114,18 +130,122 @@
     </ul>
 </div>
 
+<script defer>
+    function importItems() {
+        const fileInput = document.getElementById('importFile');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            fileInput.click();
+            document.getElementById('importButton').textContent = 'Confirm';
+            return;
+        }
+
+        const fileReader = new FileReader();
+
+        fileReader.onload = function(event) {
+            const jsonData = JSON.parse(event.target.result);
+            processImportData(jsonData);
+        };
+
+        fileReader.readAsText(file);
+    }
+
+    async function processImportData(data) {
+        try {
+            // Fetch current items for comparison
+            const currentItemsResponse = await fetch('/items');
+            if (!currentItemsResponse.ok) {
+                throw new Error('Could not fetch current items');
+            }
+            const currentItemsBeforeFilter = await currentItemsResponse.json();
+            const currentItems = currentItemsBeforeFilter.filter(item => item.list_id === "{{ $list->share_code }}");
+
+            // Filter imported data to include only new items
+            const newItemsToImport = data.filter(importedItem => {
+                return !currentItems.some(currentItem => currentItem.name === importedItem.name);
+            });
+
+            // Create only the new items
+            for (const importedItem of newItemsToImport) {
+                await createNewItem(importedItem);
+            }
+
+            location.reload(); // Or a more informative message
+
+        } catch (error) {
+            console.error('Error during import:', error);
+            alert('An error occurred during import. See console for details.');
+        }
+    }
+
+    async function updateItemQuantity(item, newQuantity, newPurchasedState) {
+        try {
+            const listExistsResponse = await fetch(`/lists/${item.list_id}`);
+            if (!listExistsResponse.ok) {
+                console.error('List not found:', item.list_id);
+                return;
+            }
+
+            const response = await fetch(`/items/${item.id}/update`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ quantity: newQuantity, purchased: newPurchasedState })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Could not update item quantity. Status: ${response.status}`);
+            }
+
+        } catch (error) {
+            console.error('Error during update:', error);
+        }
+    }
+
+    async function createNewItem(itemData) {
+        console.log(itemData.quantity);
+        itemData.quantity = itemData.quantity || 1;
+        itemData.list_id = "{{ $list->share_code }}";
+
+        const response = await fetch(`/items`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(itemData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Could not create item');
+        }
+    }
+
+
+    document.getElementById('importButton').addEventListener('click', importItems);
+</script>
+
+
+
+
 <script>
     function exportItems() {
-        fetch('/items')
+        const shareCode = "{{ $list->share_code }}";
+        fetch(`/items`)
             .then(response => response.json())
             .then(data => {
-                const jsonData = JSON.stringify(data);
+                const filteredData = data.filter(item => item.list_id === shareCode);
+
+                const jsonData = JSON.stringify(filteredData);
                 const blob = new Blob([jsonData], { type: 'application/json' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'shopping_list.json';
-                link.click(); // Trigger download
-                URL.revokeObjectURL(link.href); // Clean up
+                link.download = `shopping_list_${shareCode}.json`;
+                link.click();
+                URL.revokeObjectURL(link.href);
             })
             .catch(error => console.error("Error exporting:", error));
     }

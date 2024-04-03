@@ -1,7 +1,27 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
+    <head>
+        <title>Register</title>
+        <link rel="stylesheet" href="https://unpkg.com/tailwindcss@2/dist/tailwind.min.css">
+        <style>
+            body {
+                background-color: #fff8dc;
+            }
+
+            .container {
+                background-color: #fffacd;
+                box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+                padding: 30px;
+                border-radius: 8px;
+                transform: rotate(0deg);
+                max-width: 500px;
+                margin: 50px auto;
+            }
+        </style>
+    </head>
+
+    <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
